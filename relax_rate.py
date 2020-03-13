@@ -9,13 +9,12 @@ Created on Wed Feb 12 09:54:41 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import sympy
 import scipy.constants as const
 ## Defining constants
 qe = const.e; mp=const.proton_mass;
 A=2; Z=1 # A and Z of beam ions
 me = const.electron_mass
-lnlambda = 17
+lnlambda = 20
 kb = const.k #in m2 kg s-2 K-1
 epsilon0 = const.epsilon_0 #in A2⋅s4⋅kg−1⋅m−3
 ## Defining variables
@@ -24,16 +23,16 @@ Ej = Eev*qe # energy in Joule
 va = np.sqrt(2*Ej/(A*mp)) # velocity of incoming fast ions
 
 I_NB = 10e6/Eev #Power over DV!
-rate_NB = I_NB/(Z*qe) #number of ions per second
-
+rate_NB = I_NB #number of ions per second
+rate_NB /= qe
 #
-#Eev=85
+#Eev=85e3
 #Ej = Eev*qe # energy in Joule
 #va = np.sqrt(2*Ej/(A*mp)) # velocity of incoming fast ions
 #I_NB = 24e6/Eev #Power over DV!
 #rate_NB = I_NB/(Z*qe) #number of ions per second
 
-v=np.linspace(va*0.2, va*1.1, 20)
+v=np.linspace(va*0.2, va*1., 200)
 E = v*v*A*mp*0.5
 E = E/qe
 nue = np.zeros(np.size(v))
@@ -54,6 +53,26 @@ nu=np.zeros(np.size(v))
 
 #for i,vel in enumerate(v):
 nu = (4*const.pi*n_beta*qe**4*lnlambda)/((4*const.pi*epsilon0)**2*me**2*v**3)
+t=np.arange(0,0.500,0.001)
+nu2=n_beta*(8*const.pi/(A*mp*me))*(qe**4)/((4*const.pi*epsilon0)**2*v**3)
+population = np.zeros((np.size(t), np.size(v)))
+population[0, -1] = rate_NB*1e-12 #number of ions in the 500 keV bin
+for i,tt in enumerate(t[:-1]):
+    losses = population[i]*nu*(t[2]-t[1])
+    losses = nu*(t[2]-t[1])
+
+#    plt.plot(losses); plt.ginput(); plt.clf()
+    population[i+1, :] -= losses
+    population[i+1, :] += losses[np.roll(np.arange(np.size(v)),-1)]
+    population[i+1, -1] = population[i, -1]-losses[-1]
+    print(population[i,-1])
+#
+#for i in range(np.size(population)-5):
+#    losses = population[-1-i]*nu[-1-i]*t
+#    losses=nu[i-1]
+#    population[-2-i] += losses 
+#    population[-1-i] -= losses
+#    print(losses)
 #
 #    
 #    print('doing iteration {:d} over {:d}'.format(i, np.size(v)))
@@ -103,6 +122,12 @@ if plot:
     ax.legend()
     ax.set_xlabel(r'E [keV]')
     ax.set_ylabel(r'$\nu$ [1/s]')
+
+    f=plt.figure()
+    ax=f.add_subplot(111)
+    for i in np.arange(np.size(t)):
+        ax.plot(E*1e-3, population[i,:])
+    ax.set_ylim([0, 1e20])
 #    
 #    f2=plt.figure(); ax2=f2.add_subplot(111)
 #    ax2.plot(E*1e-3, -(nui+nue)*v)
